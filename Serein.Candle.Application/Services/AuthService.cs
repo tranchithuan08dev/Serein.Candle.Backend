@@ -37,6 +37,10 @@ namespace Serein.Candle.Application.Services
                 return Task.FromResult<LoginResponseDto?>(null);
             }
             //Còn Thiếu Mật Khẩu Hash
+            if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
+            {
+                return Task.FromResult<LoginResponseDto?>(null); 
+            }
 
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_jwtSettings.Key);
