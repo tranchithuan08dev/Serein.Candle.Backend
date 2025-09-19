@@ -104,5 +104,52 @@ namespace Serein.Candle.Application.Services
 
             return true;
         }
+
+        public async Task<bool> RegisterStaffAsync(RegisterStaffDto registerStaffDto)
+        {
+            var userExists = await _context.Users
+            .AsNoTracking()
+            .AnyAsync(u => u.Email == registerStaffDto.Email && u.Phone == registerStaffDto.Phone);
+
+            if (userExists)
+            {
+                return false;
+            }
+            string passwordHash = await Task.Run(() => BCrypt.Net.BCrypt.HashPassword(registerStaffDto.Password));
+
+            var staffRole = await _context.RoleTypes.AsNoTracking().SingleOrDefaultAsync(r => r.RoleName == "Staff");
+
+            if (staffRole == null)
+            {
+                throw new Exception("Role 'Staff' not found.");
+            }
+
+            var newUser = new User
+            {
+                Email = registerStaffDto.Email,
+                Phone = registerStaffDto.Phone,
+                FullName = registerStaffDto.FullName,
+                PasswordHash = passwordHash,
+                RoleId = staffRole.RoleId,
+                Dob = DateOnly.FromDateTime(registerStaffDto.DateOfBirth),
+                IsGuest = false,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.Users.Add(newUser);
+            await _context.SaveChangesAsync();
+
+            var newStaff = new Staff
+            {
+                UserId = newUser.UserId,
+                EmployeeCode = registerStaffDto.EmployeeCode,
+                Position = registerStaffDto.Position,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Staff.Add(newStaff);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }
