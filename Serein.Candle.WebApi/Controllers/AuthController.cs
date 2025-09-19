@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Serein.Candle.Application.Interfaces;
 using Serein.Candle.Domain.DTOs;
+using Serein.Candle.WebApi.Responses;
 
 namespace Serein.Candle.WebApi.Controllers
 {
@@ -19,13 +20,53 @@ namespace Serein.Candle.WebApi.Controllers
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
             var response = await _authService.LoginAsync(loginDto);
-
             if (response == null)
             {
-                return Unauthorized(new { message = "Email hoặc mật khẩu không đúng." });
+                return Unauthorized(new ApiResponse<object> { 
+                   Success = false,
+                    Message = "Email hoặc mật khẩu không đúng.",
+                });
             }
 
-            return Ok(response);
+            return Ok(new ApiResponse<object>(
+                true,
+                "Đăng nhập thành công.",
+                response
+            ));
+        }
+
+
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
+        {
+            try
+            {
+                var result = await _authService.RegisterAsync(registerDto);
+
+                if (!result)
+                {
+                    return BadRequest(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Email hoặc số điện thoại đã tồn tại."
+                    });
+                }
+
+                return CreatedAtAction(nameof(Register), new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Đăng ký thành công."
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Đã xảy ra lỗi trong quá trình xử lý.",
+                    Data = ex.Message 
+                });
+            }
         }
     }
 }

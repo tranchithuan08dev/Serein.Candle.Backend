@@ -10,5 +10,7 @@ namespace Serein.Candle.Application.Interfaces
     public interface IAuthService
     {
         Task<LoginResponseDto?> LoginAsync(LoginDto loginDto);
+        Task<bool> RegisterAsync(RegisterDto registerDto);
+
     }
 }

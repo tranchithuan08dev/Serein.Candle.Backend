@@ -2,6 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using Serein.Candle.Application.Interfaces;
 using Serein.Candle.Domain.DTOs;
+using Serein.Candle.Domain.Entities;
 using Serein.Candle.Domain.Settings;
 using Serein.Candle.Infrastructure.Persistence.Models;
 using System;
@@ -62,6 +63,46 @@ namespace Serein.Candle.Application.Services
                 FullName = user.FullName,
                 RoleName = user.Role.RoleName
             });
+        }
+
+        public async Task<bool> RegisterAsync(RegisterDto registerDto)
+        {
+            var userExists = await _context.Users
+                .AsNoTracking()
+                .AnyAsync(u => u.Email == registerDto.Email && u.Phone == registerDto.Phone);
+
+            if (userExists)
+            {
+                return false; 
+            }
+
+            string passwordHash = await Task.Run(() => BCrypt.Net.BCrypt.HashPassword(registerDto.Password));
+
+
+            var customerRole = await _context.RoleTypes.AsNoTracking()
+                                                       .SingleOrDefaultAsync(r => r.RoleName == "Customer");
+            if (customerRole == null)
+            {
+                throw new Exception("Role 'Customer' not found.");
+            }
+
+            var newUser = new User
+            {
+                Email = registerDto.Email,
+                Phone = registerDto.Phone,
+                FullName = registerDto.FullName,
+                PasswordHash = passwordHash,
+                IsGuest = false,
+                Dob = DateOnly.FromDateTime(registerDto.DateOfBirth),
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true,
+                RoleId = customerRole.RoleId 
+            };
+
+            _context.Users.Add(newUser);
+            await _context.SaveChangesAsync();
+
+            return true;
         }
     }
 }
