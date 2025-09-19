@@ -123,5 +123,27 @@ namespace Serein.Candle.WebApi.Controllers
             ));
         }
 
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto forgotPasswordDto)
+        {
+            var result = await _authService.ForgotPasswordAsync(forgotPasswordDto);
+            if (!result)
+            {
+                return BadRequest(new { message = "Email không tồn tại." });
+            }
+            return Ok(new { message = "Mã OTP đã được gửi đến email của bạn." });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto resetPasswordDto)
+        {
+            var result = await _authService.ResetPasswordAsync(resetPasswordDto);
+            if (!result)
+            {
+                return BadRequest(new { message = "Mã OTP không hợp lệ hoặc đã hết hạn." });
+            }
+            return Ok(new { message = "Mật khẩu đã được đặt lại thành công." });
+        }
+
     }
 }

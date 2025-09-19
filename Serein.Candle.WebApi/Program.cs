@@ -17,9 +17,12 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<Serein.Candle.Infrastructure.Persistence.Models.CandleShopDbContext>(options =>
     options.UseSqlServer(connectionString,
     sqlServerOptions => sqlServerOptions.MigrationsAssembly("Serein.Candle.Infrastructure")));
-
+// Đăng ký dịch vụ bộ nhớ đệm
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IAuthService, AuthService>();
-
+// Đăng ký dịch vụ email
+builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
+builder.Services.AddTransient<Serein.Candle.Infrastructure.Interfaces.IEmailService, Serein.Candle.Infrastructure.Services.EmailService>();
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
