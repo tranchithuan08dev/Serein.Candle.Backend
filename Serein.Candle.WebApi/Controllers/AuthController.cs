@@ -101,5 +101,27 @@ namespace Serein.Candle.WebApi.Controllers
                 });
             }
         }
+
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePasswordDto)
+        {
+            var result = await _authService.ChangePasswordAsync(changePasswordDto);
+
+            if (!result)
+            {
+                return BadRequest(new ApiResponse<object>(
+                    false,
+                    "Email hoặc mật khẩu cũ không đúng.",
+                    null
+                ));
+            }
+
+            return Ok(new ApiResponse<object>(
+                true,
+                "Mật khẩu đã được đổi thành công.",
+                null
+            ));
+        }
+
     }
 }

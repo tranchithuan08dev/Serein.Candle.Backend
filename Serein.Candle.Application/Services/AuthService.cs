@@ -25,6 +25,27 @@ namespace Serein.Candle.Application.Services
             _jwtSettings = jwtSettings;
         }
 
+        public async Task<bool> ChangePasswordAsync(ChangePasswordDto changePasswordDto)
+        {
+            var user = await _context.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Email == changePasswordDto.Email);
+            if (user == null)
+            {
+                return false;
+            }
+            if (!BCrypt.Net.BCrypt.Verify(changePasswordDto.OldPassword, user.PasswordHash))
+            {
+                return false; 
+            }
+            string newPasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordDto.NewPassword);
+            user.PasswordHash = newPasswordHash;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+
         public Task<LoginResponseDto?> LoginAsync(LoginDto loginDto)
         {
             var user = _context.Users
