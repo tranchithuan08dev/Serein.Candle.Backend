@@ -13,5 +13,7 @@ namespace Serein.Candle.Application.Interfaces
         Task<bool> RegisterAsync(RegisterDto registerDto);
         Task<bool> RegisterStaffAsync(RegisterStaffDto registerStaffDto);
         Task<bool> ChangePasswordAsync(ChangePasswordDto changePasswordDto);
+        Task<bool> ForgotPasswordAsync(ForgotPasswordDto forgotPasswordDto);
+        Task<bool> ResetPasswordAsync(ResetPasswordDto resetPasswordDto);
     }
 }

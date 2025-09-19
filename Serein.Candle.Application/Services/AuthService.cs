@@ -1,9 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using Serein.Candle.Application.Interfaces;
 using Serein.Candle.Domain.DTOs;
 using Serein.Candle.Domain.Entities;
 using Serein.Candle.Domain.Settings;
+using Serein.Candle.Infrastructure.Interfaces;
 using Serein.Candle.Infrastructure.Persistence.Models;
 using System;
 using System.Collections.Generic;
@@ -19,10 +21,14 @@ namespace Serein.Candle.Application.Services
     {
         public readonly JwtSettings _jwtSettings;
         public readonly Serein.Candle.Infrastructure.Persistence.Models.CandleShopDbContext _context;
-        public AuthService(CandleShopDbContext context,JwtSettings jwtSettings)
+        private readonly IEmailService _emailService;
+        private readonly IMemoryCache _memoryCache;
+        public AuthService(CandleShopDbContext context,JwtSettings jwtSettings, IMemoryCache memoryCache, IEmailService emailService)
         {
             _context = context;
             _jwtSettings = jwtSettings;
+            _emailService = emailService;
+            _memoryCache = memoryCache;
         }
 
         public async Task<bool> ChangePasswordAsync(ChangePasswordDto changePasswordDto)
@@ -42,6 +48,22 @@ namespace Serein.Candle.Application.Services
 
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<bool> ForgotPasswordAsync(ForgotPasswordDto forgotPasswordDto)
+        {
+            var user = await _context.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Email == forgotPasswordDto.Email);
+            if (user == null)
+            {
+                return false;
+            }
+            var otp = new Random().Next(100000, 999999).ToString();
+            _memoryCache.Set(forgotPasswordDto.Email, otp, TimeSpan.FromMinutes(5));
+            var subject = "Mã OTP để đặt lại mật khẩu của bạn";
+            var body = $"Mã OTP của bạn là: <b>{otp}</b>. Mã này sẽ hết hạn sau 5 phút.";
+            await _emailService.SendEmailAsync(forgotPasswordDto.Email, subject, body);
 
             return true;
         }
@@ -174,6 +196,32 @@ namespace Serein.Candle.Application.Services
 
             _context.Staff.Add(newStaff);
             await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ResetPasswordAsync(ResetPasswordDto resetPasswordDto)
+        {
+
+            var user = await _context.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Email == resetPasswordDto.Email);
+            if (user == null)
+            {
+                return false;
+            }
+
+            if (!_memoryCache.TryGetValue(resetPasswordDto.Email, out string? storedOtp) || storedOtp != resetPasswordDto.Otp)
+            {
+                return false;
+            }
+
+            string newPasswordHash = BCrypt.Net.BCrypt.HashPassword(resetPasswordDto.NewPassword);
+            user.PasswordHash = newPasswordHash;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+
+            _memoryCache.Remove(resetPasswordDto.Email);
+
             return true;
         }
     }
