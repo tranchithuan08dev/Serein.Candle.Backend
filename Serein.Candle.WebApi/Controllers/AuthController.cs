@@ -68,5 +68,38 @@ namespace Serein.Candle.WebApi.Controllers
                 });
             }
         }
+
+        [HttpPost("register/staff")]
+        public async Task<IActionResult> RegisterStaff([FromBody] RegisterStaffDto registerStaffDto)
+        {
+
+            try
+            {
+                var result = await _authService.RegisterStaffAsync(registerStaffDto);
+                if (!result)
+                {
+                    return BadRequest(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Email hoặc số điện thoại đã tồn tại."
+                    });
+                }
+
+                return CreatedAtAction(nameof(Register), new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Đăng ký thành công."
+                });
+            }
+            catch(Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Đã xảy ra lỗi trong quá trình xử lý.",
+                    Data = ex.Message
+                });
+            }
+        }
     }
 }
