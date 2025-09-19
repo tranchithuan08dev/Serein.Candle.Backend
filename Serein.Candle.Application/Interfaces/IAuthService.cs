@@ -11,6 +11,6 @@ namespace Serein.Candle.Application.Interfaces
     {
         Task<LoginResponseDto?> LoginAsync(LoginDto loginDto);
         Task<bool> RegisterAsync(RegisterDto registerDto);
-
+        Task<bool> RegisterStaffAsync(RegisterStaffDto registerStaffDto);
     }
 }
