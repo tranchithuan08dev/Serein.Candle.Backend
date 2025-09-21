@@ -4,9 +4,8 @@ using Microsoft.IdentityModel.Tokens;
 using Serein.Candle.Application.Interfaces;
 using Serein.Candle.Domain.DTOs;
 using Serein.Candle.Domain.Entities;
+using Serein.Candle.Domain.Interfaces;
 using Serein.Candle.Domain.Settings;
-using Serein.Candle.Infrastructure.Interfaces;
-using Serein.Candle.Infrastructure.Persistence.Models;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -20,41 +19,44 @@ namespace Serein.Candle.Application.Services
     public class AuthService : IAuthService
     {
         public readonly JwtSettings _jwtSettings;
-        public readonly Serein.Candle.Infrastructure.Persistence.Models.CandleShopDbContext _context;
+        private readonly IUserRepository _userRepository;
+        private readonly IRoleRepository _roleRepository;
+        private readonly IStaffRepository _staffRepository;
         private readonly IEmailService _emailService;
         private readonly IMemoryCache _memoryCache;
-        public AuthService(CandleShopDbContext context,JwtSettings jwtSettings, IMemoryCache memoryCache, IEmailService emailService)
+        public AuthService(IUserRepository userRepository, IRoleRepository roleRepository, IStaffRepository staffRepository, IEmailService emailService, IMemoryCache memoryCache, JwtSettings jwtSettings)
         {
-            _context = context;
-            _jwtSettings = jwtSettings;
+            _userRepository = userRepository;
+            _roleRepository = roleRepository;
+            _staffRepository = staffRepository;
             _emailService = emailService;
             _memoryCache = memoryCache;
+            _jwtSettings = jwtSettings;
         }
 
         public async Task<bool> ChangePasswordAsync(ChangePasswordDto changePasswordDto)
         {
-            var user = await _context.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Email == changePasswordDto.Email);
+            var user = await _userRepository.GetUserByEmailAsync(changePasswordDto.Email);
             if (user == null)
             {
                 return false;
             }
             if (!BCrypt.Net.BCrypt.Verify(changePasswordDto.OldPassword, user.PasswordHash))
             {
-                return false; 
+                return false;
             }
             string newPasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordDto.NewPassword);
             user.PasswordHash = newPasswordHash;
             user.UpdatedAt = DateTime.UtcNow;
 
-            _context.Users.Update(user);
-            await _context.SaveChangesAsync();
-
+            _userRepository.UpdateUser(user);
+            await _userRepository.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> ForgotPasswordAsync(ForgotPasswordDto forgotPasswordDto)
         {
-            var user = await _context.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Email == forgotPasswordDto.Email);
+            var user = await _userRepository.GetUserByEmailAsync(forgotPasswordDto.Email);
             if (user == null)
             {
                 return false;
@@ -68,21 +70,13 @@ namespace Serein.Candle.Application.Services
             return true;
         }
 
-        public Task<LoginResponseDto?> LoginAsync(LoginDto loginDto)
+        public async Task<LoginResponseDto?> LoginAsync(LoginDto loginDto)
         {
-            var user = _context.Users
-                               .AsNoTracking()
-                               .Include(u => u.Role)
-                               .SingleOrDefault(u => u.Email == loginDto.Email);
+            var user = await _userRepository.GetUserByEmailWithRoleAsync(loginDto.Email);
 
-            if(user == null)
-            {
-                return Task.FromResult<LoginResponseDto?>(null);
-            }
-            //Còn Thiếu Mật Khẩu Hash
             if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
             {
-                return Task.FromResult<LoginResponseDto?>(null); 
+                return null;
             }
 
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -103,31 +97,26 @@ namespace Serein.Candle.Application.Services
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
 
-            return Task.FromResult<LoginResponseDto?>(new LoginResponseDto
+            return new LoginResponseDto
             {
                 Token = tokenHandler.WriteToken(token),
                 Email = user.Email,
                 FullName = user.FullName,
                 RoleName = user.Role.RoleName
-            });
+            };
         }
 
         public async Task<bool> RegisterAsync(RegisterDto registerDto)
         {
-            var userExists = await _context.Users
-                .AsNoTracking()
-                .AnyAsync(u => u.Email == registerDto.Email && u.Phone == registerDto.Phone);
-
+            var userExists = await _userRepository.IsUserExistsAsync(registerDto.Email, registerDto.Phone);
             if (userExists)
             {
-                return false; 
+                return false;
             }
 
             string passwordHash = await Task.Run(() => BCrypt.Net.BCrypt.HashPassword(registerDto.Password));
 
-
-            var customerRole = await _context.RoleTypes.AsNoTracking()
-                                                       .SingleOrDefaultAsync(r => r.RoleName == "Customer");
+            var customerRole = await _roleRepository.GetRoleByNameAsync("Customer");
             if (customerRole == null)
             {
                 throw new Exception("Role 'Customer' not found.");
@@ -143,29 +132,25 @@ namespace Serein.Candle.Application.Services
                 Dob = DateOnly.FromDateTime(registerDto.DateOfBirth),
                 CreatedAt = DateTime.UtcNow,
                 IsActive = true,
-                RoleId = customerRole.RoleId 
+                RoleId = customerRole.RoleId
             };
 
-            _context.Users.Add(newUser);
-            await _context.SaveChangesAsync();
+            await _userRepository.AddUserAsync(newUser);
+            await _userRepository.SaveChangesAsync();
 
             return true;
         }
 
         public async Task<bool> RegisterStaffAsync(RegisterStaffDto registerStaffDto)
         {
-            var userExists = await _context.Users
-            .AsNoTracking()
-            .AnyAsync(u => u.Email == registerStaffDto.Email && u.Phone == registerStaffDto.Phone);
-
+            var userExists = await _userRepository.IsUserExistsAsync(registerStaffDto.Email, registerStaffDto.Phone);
             if (userExists)
             {
                 return false;
             }
             string passwordHash = await Task.Run(() => BCrypt.Net.BCrypt.HashPassword(registerStaffDto.Password));
 
-            var staffRole = await _context.RoleTypes.AsNoTracking().SingleOrDefaultAsync(r => r.RoleName == "Staff");
-
+            var staffRole = await _roleRepository.GetRoleByNameAsync("Staff");
             if (staffRole == null)
             {
                 throw new Exception("Role 'Staff' not found.");
@@ -183,8 +168,8 @@ namespace Serein.Candle.Application.Services
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
-            _context.Users.Add(newUser);
-            await _context.SaveChangesAsync();
+            await _userRepository.AddUserAsync(newUser);
+            await _userRepository.SaveChangesAsync();
 
             var newStaff = new Staff
             {
@@ -194,15 +179,16 @@ namespace Serein.Candle.Application.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            _context.Staff.Add(newStaff);
-            await _context.SaveChangesAsync();
+            await _staffRepository.AddStaffAsync(newStaff);
+            await _userRepository.SaveChangesAsync();
+
             return true;
         }
 
         public async Task<bool> ResetPasswordAsync(ResetPasswordDto resetPasswordDto)
         {
 
-            var user = await _context.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Email == resetPasswordDto.Email);
+            var user = await _userRepository.GetUserByEmailAsync(resetPasswordDto.Email);
             if (user == null)
             {
                 return false;
@@ -217,8 +203,8 @@ namespace Serein.Candle.Application.Services
             user.PasswordHash = newPasswordHash;
             user.UpdatedAt = DateTime.UtcNow;
 
-            _context.Users.Update(user);
-            await _context.SaveChangesAsync();
+            _userRepository.UpdateUser(user);
+            await _userRepository.SaveChangesAsync();
 
             _memoryCache.Remove(resetPasswordDto.Email);
 

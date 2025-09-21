@@ -3,8 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serein.Candle.Application.Interfaces;
 using Serein.Candle.Application.Services;
+using Serein.Candle.Domain.Interfaces;
 using Serein.Candle.Domain.Settings;
 using Serein.Candle.Infrastructure.Persistence.Models;
+using Serein.Candle.Infrastructure.Persistence.Repositories;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,17 +14,26 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Đăng ký DbContext với chuỗi kết nối từ appsettings.json
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
+// Đăng ký dịch vụ Cloudinary
+builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 // Chỉ giữ lại dòng đăng ký DbContext đúng này
 builder.Services.AddDbContext<Serein.Candle.Infrastructure.Persistence.Models.CandleShopDbContext>(options =>
     options.UseSqlServer(connectionString,
     sqlServerOptions => sqlServerOptions.MigrationsAssembly("Serein.Candle.Infrastructure")));
+
+
+// Đăng ký các Repository
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IStaffRepository, StaffRepository>();
+
+
 // Đăng ký dịch vụ bộ nhớ đệm
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IAuthService, AuthService>();
 // Đăng ký dịch vụ email
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
-builder.Services.AddTransient<Serein.Candle.Infrastructure.Interfaces.IEmailService, Serein.Candle.Infrastructure.Services.EmailService>();
+builder.Services.AddTransient<Serein.Candle.Application.Interfaces.IEmailService, Serein.Candle.Infrastructure.Services.EmailService>();
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
