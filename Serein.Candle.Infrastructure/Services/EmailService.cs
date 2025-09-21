@@ -7,7 +7,7 @@ using Serein.Candle.Infrastructure.Interfaces;
 
 namespace Serein.Candle.Infrastructure.Services
 {
-    public class EmailService : IEmailService
+    public class EmailService : Serein.Candle.Application.Interfaces.IEmailService
     {
         private readonly SmtpSettings _smtpSettings;
 
