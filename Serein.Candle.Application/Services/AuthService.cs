@@ -84,6 +84,7 @@ namespace Serein.Candle.Application.Services
 
             var claims = new List<Claim>
         {
+           new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.Name, user.FullName ?? string.Empty),
             new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "Guest")
@@ -93,6 +94,8 @@ namespace Serein.Candle.Application.Services
             {
                 Subject = new ClaimsIdentity(claims),
                 Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes),
+                Issuer = _jwtSettings.Issuer,        
+                Audience = _jwtSettings.Audience,
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
