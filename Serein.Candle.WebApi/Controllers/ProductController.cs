@@ -50,24 +50,19 @@ namespace Serein.Candle.WebApi.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllProducts()
+        public async Task<ActionResult<PagedResult<ProductDetailDto>>> GetAllProducts(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 0,
+        [FromQuery] string? sortBy = null)
         {
-            var products = await _productService.GetAllProductsAsync();
+            var products = await _productService.GetAllProductsAsync(pageNumber, pageSize, sortBy);
 
-            if (products == null || !products.Any())
+            if (products == null || !products.Data.Any())
             {
-                return NotFound(new ApiResponse<object>(
-                    success: false,
-                    message: "No products found.",
-                    data: null
-                ));
+                return NotFound("No products found.");
             }
 
-            return Ok(new ApiResponse<IEnumerable<ProductDetailDto>>(
-                success: true,
-                message: "Products retrieved successfully.",
-                data: products
-            ));
+            return Ok(products);
         }
 
         [HttpGet("{id}")]
