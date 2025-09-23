@@ -22,5 +22,17 @@ namespace Serein.Candle.Infrastructure.Persistence.Repositories
         {
             await _context.ProductImages.AddAsync(productImage);
         }
+
+        public Task AddRangeAsync(IEnumerable<ProductImage> images)
+        {
+            _context.ProductImages.AddRangeAsync(images);
+            return Task.CompletedTask;
+        }
+
+        public Task RemoveRangeAsync(IEnumerable<ProductImage> images)
+        {
+            _context.ProductImages.RemoveRange(images);
+            return Task.CompletedTask;
+        }
     }
 }
