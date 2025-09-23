@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Serein.Candle.Application.Interfaces;
 using Serein.Candle.Domain.DTOs;
 using Serein.Candle.Domain.Entities;
@@ -33,32 +34,77 @@ namespace Serein.Candle.Application.Services
             _imageService = imageService;
         }
 
-        public async Task<IEnumerable<ProductDetailDto>> GetAllProductsAsync()
+        public async Task<PagedResult<ProductDetailDto>> GetAllProductsAsync(int pageNumber, int pageSize, string? sortBy)
         {
-            var products = await _productRepository.GetAllProductsAsync();
+            var allProductsQuery = _productRepository.GetAllProducts();
 
-            return products.Select(p => new ProductDetailDto
+            // 1. Áp dụng logic sắp xếp
+            if (!string.IsNullOrEmpty(sortBy))
             {
-                ProductId = p.ProductId,
-                Name = p.Name,
-                SKU = p.Sku,
-                Description = p.Description,
-                Ingredients = p.Ingredients,
-                BurnTime = p.BurnTime,
-                Price = p.Price,
-                IsActive = p.IsActive,
-                CategoryName = p.Category.Name,
-                Images = p.ProductImages.Select(i => new ProductImageDto
+                switch (sortBy.ToLower())
                 {
-                    ImageUrl = i.ImageUrl,
-                    IsPrimary = i.IsPrimary
-                }).ToList(),
-                Attributes = p.ProductAttributeValues.Select(a => new ProductAttributeDto
+                    case "name":
+                        allProductsQuery = allProductsQuery.OrderBy(p => p.Name);
+                        break;
+                    case "price":
+                        allProductsQuery = allProductsQuery.OrderBy(p => p.Price);
+                        break;
+                    case "createdat":
+                        allProductsQuery = allProductsQuery.OrderByDescending(p => p.CreatedAt);
+                        break;
+                    default:
+                        allProductsQuery = allProductsQuery.OrderBy(p => p.Name); // Sắp xếp mặc định
+                        break;
+                }
+            }
+            else
+            {
+                allProductsQuery = allProductsQuery.OrderBy(p => p.Name);
+            }
+
+            // 2. Lấy tổng số sản phẩm (trước khi phân trang)
+            var totalCount = await allProductsQuery.CountAsync();
+
+            // 3. Phân trang nếu pageSize lớn hơn 0
+            if (pageSize > 0)
+            {
+                allProductsQuery = allProductsQuery
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize);
+            }
+
+            // 4. Ánh xạ dữ liệu và thực thi truy vấn
+            var products = await allProductsQuery
+                .Select(p => new ProductDetailDto
                 {
-                    AttributeName = a.Attribute.Name,
-                    Value = a.Value
-                }).ToList()
-            }).ToList();
+                    ProductId = p.ProductId,
+                    Name = p.Name,
+                    SKU = p.Sku,
+                    Description = p.Description,
+                    Ingredients = p.Ingredients,
+                    BurnTime = p.BurnTime,
+                    Price = p.Price,
+                    IsActive = p.IsActive,
+                    CategoryName = p.Category.Name,
+                    Images = p.ProductImages.Select(i => new ProductImageDto
+                    {
+                        ImageUrl = i.ImageUrl,
+                        IsPrimary = i.IsPrimary
+                    }).ToList(),
+                    Attributes = p.ProductAttributeValues.Select(a => new ProductAttributeDto
+                    {
+                        AttributeName = a.Attribute.Name,
+                        Value = a.Value
+                    }).ToList()
+                }).ToListAsync();
+
+            return new PagedResult<ProductDetailDto>
+            {
+                Data = products,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
         }
 
         public async Task<ProductDetailDto?> GetProductDetailAsync(int productId)
