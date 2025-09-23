@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Serein.Candle.Domain.DTOs
@@ -13,6 +14,8 @@ namespace Serein.Candle.Domain.DTOs
         public string Name { get; set; } = string.Empty;
 
         public string SKU { get; set; } = string.Empty;
+
+        public string ShortDescription { get; set; } = string.Empty;
 
         [Required]
         public string Description { get; set; } = string.Empty;
@@ -26,7 +29,7 @@ namespace Serein.Candle.Domain.DTOs
 
         [Required]
         public int CategoryId { get; set; }
-
+   
         public ICollection<InsertProductAttributeDto> Attributes { get; set; } = new List<InsertProductAttributeDto>();
     }
     public class InsertProductAttributeDto
