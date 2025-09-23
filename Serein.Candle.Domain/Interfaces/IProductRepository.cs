@@ -10,6 +10,10 @@ namespace Serein.Candle.Domain.Interfaces
     public interface IProductRepository
     {
         Task AddProductAsync(Product product);
+        Task<Product?> GetProductDetailAsync(int productId);
+        Task<Product?> GetByIdAsync(int id);
+        Task UpdateProductAsync(Product product);
+        Task<IEnumerable<Product>> GetAllProductsAsync();
         Task<int> SaveChangesAsync();
     }
 }
