@@ -32,6 +32,69 @@ namespace Serein.Candle.Application.Services
             _inventoryRepository = inventoryRepository;
             _imageService = imageService;
         }
+
+        public async Task<IEnumerable<ProductDetailDto>> GetAllProductsAsync()
+        {
+            var products = await _productRepository.GetAllProductsAsync();
+
+            return products.Select(p => new ProductDetailDto
+            {
+                ProductId = p.ProductId,
+                Name = p.Name,
+                SKU = p.Sku,
+                Description = p.Description,
+                Ingredients = p.Ingredients,
+                BurnTime = p.BurnTime,
+                Price = p.Price,
+                IsActive = p.IsActive,
+                CategoryName = p.Category.Name,
+                Images = p.ProductImages.Select(i => new ProductImageDto
+                {
+                    ImageUrl = i.ImageUrl,
+                    IsPrimary = i.IsPrimary
+                }).ToList(),
+                Attributes = p.ProductAttributeValues.Select(a => new ProductAttributeDto
+                {
+                    AttributeName = a.Attribute.Name,
+                    Value = a.Value
+                }).ToList()
+            }).ToList();
+        }
+
+        public async Task<ProductDetailDto?> GetProductDetailAsync(int productId)
+        {
+            var product = await _productRepository.GetProductDetailAsync(productId);
+            if (product == null)
+            {
+                return null;
+            }
+
+            var productDetailDto = new ProductDetailDto
+            {
+                ProductId = product.ProductId,
+                Name = product.Name,
+                SKU = product.Sku,
+                Description = product.Description,
+                Ingredients = product.Ingredients,
+                BurnTime = product.BurnTime,
+                Price = product.Price,
+                CategoryName = product.Category.Name,
+                IsActive = product.IsActive,
+                Attributes = product.ProductAttributeValues.Select(pav => new ProductAttributeDto
+                {
+                    AttributeName = pav.Attribute.Name,
+                    Value = pav.Value
+                }).ToList(),
+                Images = product.ProductImages.Select(pi => new ProductImageDto
+                {
+                    ImageUrl = pi.ImageUrl,
+                    IsPrimary = pi.IsPrimary
+                }).ToList()
+            };
+
+            return productDetailDto;
+        }
+
         public async Task<bool> InsertProductAsync(InsertProductDto productDto, IFormFileCollection images)
         {        // 1. Tải ảnh lên dịch vụ cloud
             var imageUrls = await _imageService.UploadImagesAsync(images);
@@ -46,6 +109,7 @@ namespace Serein.Candle.Application.Services
                 CategoryId = productDto.CategoryId,
                 Name = productDto.Name,
                 Sku = productDto.SKU,
+                ShortDescription = productDto.ShortDescription,
                 Description = productDto.Description,
                 Ingredients = productDto.Ingredients,
                 BurnTime = productDto.BurnTime,
@@ -101,6 +165,112 @@ namespace Serein.Candle.Application.Services
 
             return true;
 
+        }
+
+        public async Task<bool> SoftDeleteProductAsync(int productId)
+        {
+            var product = await _productRepository.GetByIdAsync(productId);
+            if (product == null)
+            {
+                return false;
+            }
+
+            product.IsActive = false;
+
+            return await _productRepository.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> UpdateProductAsync(int productId, UpdateProductDto productDto)
+        {
+            // 1. Tìm sản phẩm trong DB
+            var existingProduct = await _productRepository.GetProductDetailAsync(productId);
+            if (existingProduct == null)
+            {
+                return false;
+            }
+
+            // 2. Cập nhật các trường chính của sản phẩm
+            existingProduct.Name = productDto.Name;
+            existingProduct.Sku = productDto.SKU;
+            existingProduct.ShortDescription = productDto.ShortDescription;
+            existingProduct.Description = productDto.Description;
+            existingProduct.Ingredients = productDto.Ingredients;
+            existingProduct.BurnTime = productDto.BurnTime;
+            existingProduct.Price = productDto.Price;
+            existingProduct.UpdatedAt = DateTime.UtcNow;
+
+            if (existingProduct.Name != productDto.Name)
+            {
+                existingProduct.Slug = productDto.Name.ToLower().Replace(" ", "-");
+            }
+
+            // 3. Cập nhật thuộc tính sản phẩm
+            // Xóa thuộc tính cũ
+            if (existingProduct.ProductAttributeValues.Any())
+            {
+                await _productAttributeValueRepository.RemoveRangeAsync(existingProduct.ProductAttributeValues);
+            }
+
+            // Thêm thuộc tính mới
+            foreach (var attrDto in productDto.Attributes)
+            {
+                var newAttribute = new ProductAttributeValue
+                {
+                    ProductId = existingProduct.ProductId,
+                    AttributeId = attrDto.AttributeId,
+                    Value = attrDto.Value
+                };
+                await _productAttributeValueRepository.AddProductAttributeValueAsync(newAttribute);
+            }
+
+            // 4. Lưu tất cả các thay đổi
+            await _productRepository.UpdateProductAsync(existingProduct);
+            await _productRepository.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<bool> UpdateProductImagesAsync(int productId, IFormFileCollection images)
+        {
+            // 1. Tìm sản phẩm trong cơ sở dữ liệu
+            var existingProduct = await _productRepository.GetProductDetailAsync(productId);
+            if (existingProduct == null)
+            {
+                return false;
+            }
+
+            // 2. Tải các file ảnh mới lên dịch vụ Cloudinary
+            var newImageUrls = await _imageService.UploadImagesAsync(images);
+            if (newImageUrls == null || !newImageUrls.Any())
+            {
+                return false;
+            }
+
+            // 3. Xóa tất cả hình ảnh cũ của sản phẩm
+            if (existingProduct.ProductImages.Any())
+            {
+                await _productImageRepository.RemoveRangeAsync(existingProduct.ProductImages);
+            }
+
+            // 4. Tạo các đối tượng ProductImage mới và thêm vào DB
+            int sortOrder = 0;
+            foreach (var url in newImageUrls)
+            {
+                var newImage = new ProductImage
+                {
+                    ProductId = existingProduct.ProductId,
+                    ImageUrl = url,
+                    IsPrimary = (sortOrder == 0),
+                    SortOrder = sortOrder
+                };
+                await _productImageRepository.AddProductImageAsync(newImage);
+                sortOrder++;
+            }
+
+            // 5. Lưu tất cả thay đổi vào cơ sở dữ liệu
+            await _productRepository.SaveChangesAsync();
+
+            return true;
         }
     }
 }

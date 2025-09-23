@@ -10,6 +10,8 @@ namespace Serein.Candle.Domain.Interfaces
     public interface IProductImageRepository
     {
         Task AddProductImageAsync(ProductImage productImage);
-     
+        Task AddRangeAsync(IEnumerable<ProductImage> images);
+        Task RemoveRangeAsync(IEnumerable<ProductImage> images);
+
     }
 }

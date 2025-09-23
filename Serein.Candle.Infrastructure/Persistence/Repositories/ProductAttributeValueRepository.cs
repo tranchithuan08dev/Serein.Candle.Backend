@@ -22,5 +22,11 @@ namespace Serein.Candle.Infrastructure.Persistence.Repositories
         {
             await _context.ProductAttributeValues.AddAsync(productAttributeValue);
         }
+
+        public Task RemoveRangeAsync(IEnumerable<ProductAttributeValue> attributes)
+        {
+            _context.ProductAttributeValues.RemoveRange(attributes);
+            return Task.CompletedTask;
+        }
     }
 }

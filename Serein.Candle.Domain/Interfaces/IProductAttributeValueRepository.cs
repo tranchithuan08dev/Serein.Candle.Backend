@@ -10,5 +10,6 @@ namespace Serein.Candle.Domain.Interfaces
     public interface IProductAttributeValueRepository
     {
         Task AddProductAttributeValueAsync(ProductAttributeValue productAttributeValue);
+        Task RemoveRangeAsync(IEnumerable<ProductAttributeValue> attributes);
     }
 }
