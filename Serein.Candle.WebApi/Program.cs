@@ -7,6 +7,7 @@ using Serein.Candle.Domain.Interfaces;
 using Serein.Candle.Domain.Settings;
 using Serein.Candle.Infrastructure.Persistence.Models;
 using Serein.Candle.Infrastructure.Persistence.Repositories;
+using Serein.Candle.Infrastructure.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,9 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 // Đăng ký dịch vụ Cloudinary
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
+builder.Services.AddTransient<IImageService, CloudinaryImageService>();
+
+
 // Chỉ giữ lại dòng đăng ký DbContext đúng này
 builder.Services.AddDbContext<Serein.Candle.Infrastructure.Persistence.Models.CandleShopDbContext>(options =>
     options.UseSqlServer(connectionString,
@@ -26,11 +30,18 @@ builder.Services.AddDbContext<Serein.Candle.Infrastructure.Persistence.Models.Ca
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IStaffRepository, StaffRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IProductImageRepository, ProductImageRepository>();
+builder.Services.AddScoped<IProductAttributeValueRepository, ProductAttributeValueRepository>();
+builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 
 
 // Đăng ký dịch vụ bộ nhớ đệm
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+
+
 // Đăng ký dịch vụ email
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
 builder.Services.AddTransient<Serein.Candle.Application.Interfaces.IEmailService, Serein.Candle.Infrastructure.Services.EmailService>();
