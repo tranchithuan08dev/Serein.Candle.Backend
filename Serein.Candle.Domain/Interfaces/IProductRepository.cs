@@ -14,6 +14,7 @@ namespace Serein.Candle.Domain.Interfaces
         Task<Product?> GetByIdAsync(int id);
         Task UpdateProductAsync(Product product);
         Task<IEnumerable<Product>> GetAllProductsAsync();
+        IQueryable<Product> GetAllProducts();
         Task<int> SaveChangesAsync();
     }
 }
