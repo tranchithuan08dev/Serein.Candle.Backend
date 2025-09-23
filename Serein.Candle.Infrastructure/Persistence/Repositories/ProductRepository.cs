@@ -23,6 +23,16 @@ namespace Serein.Candle.Infrastructure.Persistence.Repositories
             await _context.Products.AddAsync(product);
         }
 
+        public IQueryable<Product> GetAllProducts()
+        {
+            return _context.Products
+             .Include(p => p.Category)
+             .Include(p => p.ProductImages)
+             .Include(p => p.ProductAttributeValues)
+             .ThenInclude(pav => pav.Attribute)
+             .AsNoTracking();
+        }
+
         public async Task<IEnumerable<Product>> GetAllProductsAsync()
         {
             return await _context.Products
