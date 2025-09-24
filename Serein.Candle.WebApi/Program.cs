@@ -46,6 +46,9 @@ builder.Services.AddAutoMapper(typeof(GeneralMappingProfile));
 builder.Services.AddScoped<IProductAttributeRepository, ProductAttributeRepository>();
 builder.Services.AddScoped<IProductAttributeService, ProductAttributeService>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
+builder.Services.AddScoped<IVoucherService, VoucherService>();
+
 
 // Đăng ký Generic Services và Controllers 
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
