@@ -70,5 +70,69 @@ namespace Serein.Candle.Application.Services
 
             return await _cartItemRepository.SaveChangesAsync();
         }
+
+        public async Task<CartDetailDto?> GetCartByUserIdAsync(int userId)
+        {
+            var cart = await _cartRepository.GetCartByUserIdAsync(userId);
+            if (cart == null)
+            {
+                return null;
+            }
+
+            var totalAmount = cart.CartItems.Sum(item => item.Quantity * item.PriceAtAdd);
+            var cartDto = new CartDetailDto
+            {
+                CartId = cart.CartId,
+                UserId = cart.UserId,
+                TotalAmount = totalAmount,
+                Items = new List<CartItemDto>()
+            };
+
+            // Vòng lặp để lấy chi tiết từng sản phẩm
+            foreach (var item in cart.CartItems)
+            {
+                var productDetail = await _productRepository.GetProductDetailAsync(item.ProductId);
+
+                if (productDetail != null)
+                {
+                    var cartItemDto = new CartItemDto
+                    {
+                        ProductId = item.ProductId,
+                        ProductName = productDetail.Name,
+                        ProductSku = productDetail.Sku,
+                        Quantity = item.Quantity,
+                        PriceAtAdd = item.PriceAtAdd,
+                        ImageUrl = productDetail.ProductImages.FirstOrDefault()?.ImageUrl ?? string.Empty,
+                        // Bạn có thể thêm các thông tin khác từ productDetail vào đây nếu cần
+                    };
+                    cartDto.Items.Add(cartItemDto);
+                }
+            }
+
+            return cartDto;
+        }
+
+        public async Task<bool> RemoveProductFromCartAsync(int userId, int productId)
+        {
+            // 1. Tìm giỏ hàng của người dùng
+            var existingCart = await _cartRepository.GetCartByUserIdAsync(userId);
+            if (existingCart == null)
+            {
+                return false;
+            }
+
+            // 2. Tìm mặt hàng cần xóa trong giỏ hàng
+            var existingCartItem = await _cartItemRepository.GetCartItemAsync(existingCart.CartId, productId);
+            if (existingCartItem == null)
+            {
+                return false;
+            }
+
+            // 3. Xóa mặt hàng
+            _cartItemRepository.RemoveCartItem(existingCartItem);
+
+            // 4. Lưu thay đổi vào database
+            return await _cartItemRepository.SaveChangesAsync();
+        }
     }
 }
