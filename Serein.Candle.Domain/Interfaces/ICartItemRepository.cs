@@ -11,6 +11,8 @@ namespace Serein.Candle.Domain.Interfaces
     {
         Task AddCartItemAsync(CartItem cartItem);
         Task<CartItem?> GetCartItemAsync(int cartId, int productId);
+        void RemoveCartItem(CartItem cartItem);
+        Task<Cart?> GetCartByUserIdAsync(int userId);
         Task<bool> SaveChangesAsync();
     }
 }
