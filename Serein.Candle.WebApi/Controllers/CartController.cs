@@ -39,5 +39,42 @@ namespace Serein.Candle.WebApi.Controllers
 
             return BadRequest("Failed to add product to cart. Product might not exist.");
         }
+
+
+        [HttpDelete("items/{productId}")]
+        public async Task<IActionResult> RemoveProductFromCart(int productId)
+        {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int userId))
+            {
+                return Unauthorized("User is not authenticated or user ID is invalid.");
+            }
+
+            var result = await _cartService.RemoveProductFromCartAsync(userId, productId);
+            if (result)
+            {
+                return Ok("Product removed from cart successfully.");
+            }
+
+            return NotFound("Product not found in cart or failed to remove.");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetCart()
+        {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int userId))
+            {
+                return Unauthorized("User is not authenticated or user ID is invalid.");
+            }
+
+            var cart = await _cartService.GetCartByUserIdAsync(userId);
+            if (cart == null)
+            {
+                return NotFound("Cart not found for this user.");
+            }
+
+            return Ok(cart);
+        }
     }
 }
