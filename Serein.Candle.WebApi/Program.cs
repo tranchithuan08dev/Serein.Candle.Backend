@@ -2,9 +2,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serein.Candle.Application.Interfaces;
+using Serein.Candle.Application.MappingProfiles;
 using Serein.Candle.Application.Services;
 using Serein.Candle.Domain.Interfaces;
 using Serein.Candle.Domain.Settings;
+using Serein.Candle.Infrastructure.Interfaces;
 using Serein.Candle.Infrastructure.Persistence.Models;
 using Serein.Candle.Infrastructure.Persistence.Repositories;
 using Serein.Candle.Infrastructure.Services;
@@ -37,6 +39,18 @@ builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 builder.Services.AddScoped<ICartItemRepository, CartItemRepository>();
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 
+// Đăng ký AutoMapper
+builder.Services.AddAutoMapper(typeof(GeneralMappingProfile));
+
+// Đăng ký các lớp cụ thể cho ProductAttribute
+builder.Services.AddScoped<IProductAttributeRepository, ProductAttributeRepository>();
+builder.Services.AddScoped<IProductAttributeService, ProductAttributeService>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+
+// Đăng ký Generic Services và Controllers 
+builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+builder.Services.AddScoped(typeof(IGenericService<,>), typeof(GenericService<,>));
+builder.Services.AddScoped<ICategoryService, CategoryService>();
 
 // Đăng ký dịch vụ bộ nhớ đệm
 builder.Services.AddMemoryCache();
