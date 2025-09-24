@@ -16,6 +16,7 @@ namespace Serein.Candle.Application.MappingProfiles
             CreateMap<Category, CategoryCRUDDto>().ReverseMap();
             // ProductAttribute Mappings
             CreateMap<ProductAttribute, ProductAttributeCRUDDto>().ReverseMap();
+            CreateMap<Voucher, VoucherCRUDDto>().ReverseMap();
         }
     }
 }
