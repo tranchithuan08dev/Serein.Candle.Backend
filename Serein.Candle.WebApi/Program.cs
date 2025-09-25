@@ -48,7 +48,8 @@ builder.Services.AddScoped<IProductAttributeService, ProductAttributeService>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
 builder.Services.AddScoped<IVoucherService, VoucherService>();
-
+builder.Services.AddScoped<IRoleTypeRepository, RoleTypeRepository>();
+builder.Services.AddScoped<IRoleTypeService, RoleTypeService>();
 
 // Đăng ký Generic Services và Controllers 
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
