@@ -38,6 +38,7 @@ builder.Services.AddScoped<IProductAttributeValueRepository, ProductAttributeVal
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 builder.Services.AddScoped<ICartItemRepository, CartItemRepository>();
 builder.Services.AddScoped<ICartRepository, CartRepository>();
+builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 
 // Đăng ký AutoMapper
 builder.Services.AddAutoMapper(typeof(GeneralMappingProfile));
@@ -55,6 +56,8 @@ builder.Services.AddScoped<IRoleTypeService, RoleTypeService>();
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped(typeof(IGenericService<,>), typeof(GenericService<,>));
 builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IWishlistService, WishlistService>();
+
 
 // Đăng ký dịch vụ bộ nhớ đệm
 builder.Services.AddMemoryCache();
