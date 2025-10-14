@@ -39,7 +39,8 @@ builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 builder.Services.AddScoped<ICartItemRepository, CartItemRepository>();
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
-
+builder.Services.AddScoped<IProductReviewRepository, ProductReviewRepository>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 // Đăng ký AutoMapper
 builder.Services.AddAutoMapper(typeof(GeneralMappingProfile));
 
@@ -51,6 +52,8 @@ builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
 builder.Services.AddScoped<IVoucherService, VoucherService>();
 builder.Services.AddScoped<IRoleTypeRepository, RoleTypeRepository>();
 builder.Services.AddScoped<IRoleTypeService, RoleTypeService>();
+builder.Services.AddScoped<IProductReviewService, ProductReviewService>();
+
 
 // Đăng ký Generic Services và Controllers 
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
@@ -64,7 +67,7 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICartService, CartService>();
-
+builder.Services.AddScoped<IOrderService, OrderService>();
 // Đăng ký dịch vụ email
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
 builder.Services.AddTransient<Serein.Candle.Application.Interfaces.IEmailService, Serein.Candle.Infrastructure.Services.EmailService>();
