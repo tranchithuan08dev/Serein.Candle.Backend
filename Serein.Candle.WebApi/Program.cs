@@ -20,13 +20,24 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 // Đăng ký dịch vụ Cloudinary
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 builder.Services.AddTransient<IImageService, CloudinaryImageService>();
-
-
+// add CORS
+var _MyAllowSpecificOrigins = "MyCORS";
 // Chỉ giữ lại dòng đăng ký DbContext đúng này
 builder.Services.AddDbContext<Serein.Candle.Infrastructure.Persistence.Models.CandleShopDbContext>(options =>
     options.UseSqlServer(connectionString,
     sqlServerOptions => sqlServerOptions.MigrationsAssembly("Serein.Candle.Infrastructure")));
-
+// Cấu hình CORS <--- BƯỚC 2
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: _MyAllowSpecificOrigins,
+        builder =>
+        {
+            builder.WithOrigins("http://localhost:8080")
+                   .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                   .AllowAnyHeader()
+                   .AllowCredentials();
+        });
+});
 
 // Đăng ký các Repository
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -114,6 +125,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors(_MyAllowSpecificOrigins);
 app.UseAuthentication();
 app.UseAuthorization();
 
