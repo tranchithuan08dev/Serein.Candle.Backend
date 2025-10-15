@@ -126,18 +126,16 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 // =======================================================
 // THAY ĐỔI 4: Cấu hình JWT Settings
 // =======================================================
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
-var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>() ?? new JwtSettings();
+jwtSettings.Key = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? jwtSettings.Key;
 
-if (jwtSettings != null)
+if (string.IsNullOrEmpty(jwtSettings.Key))
 {
-    // Phải có dòng này để ghi đè giá trị từ biến môi trường
-    jwtSettings.Key = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
+    throw new InvalidOperationException("JWT_SECRET_KEY bị thiếu.");
 }
 
-
-
 builder.Services.AddSingleton(jwtSettings);
+
 
 var key = Encoding.ASCII.GetBytes(jwtSettings.Key);
 
