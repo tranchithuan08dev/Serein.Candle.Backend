@@ -87,5 +87,26 @@ namespace Serein.Candle.WebApi.Controllers
 
             return BadRequest(new { Message = result.Message });
         }
+
+
+        [HttpPut("{orderId}/status")]
+        // TODO: Bạn cần cấu hình Policy hoặc Roles trong hệ thống để sử dụng dòng này
+        // [Authorize(Roles = "Staff, Admin")] 
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(404)]
+        public async Task<IActionResult> UpdateOrderStatus(int orderId, [FromBody] UpdateOrderStatusDto dto)
+        {
+       
+            var result = await _orderService.UpdateOrderStatusAsync(orderId, dto);
+
+            if (result.Success)
+            {
+                return Ok(new { Message = result.Message });
+            }
+
+            return BadRequest(new { Message = result.Message });
+        }
     }
 }
