@@ -135,11 +135,7 @@ if (jwtSettings != null)
     jwtSettings.Key = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
 }
 
-// Thêm kiểm tra Null cho Key trước khi sử dụng
-if (jwtSettings == null || string.IsNullOrEmpty(jwtSettings.Key) || jwtSettings.Key.Length < 32)
-{
-    throw new InvalidOperationException("Khóa bí mật JWT (JWT_SECRET_KEY) bị thiếu hoặc quá ngắn trên môi trường triển khai.");
-}
+
 
 builder.Services.AddSingleton(jwtSettings);
 
