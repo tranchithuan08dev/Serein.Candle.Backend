@@ -63,5 +63,18 @@ namespace Serein.Candle.Infrastructure.Persistence.Repositories
         {
             return await _context.SaveChangesAsync() > 0;
         }
+
+        public async Task<Order?> GetOrderByIdAsync(int orderId)
+        {
+           
+            return await _context.Orders.FindAsync(orderId);
+        }
+
+       
+        public async Task<bool> IsStatusIdValidAsync(int statusId)
+        {
+            return await _context.OrderStatuses.AnyAsync(s => s.StatusId == statusId);
+        }
+
     }
 }

@@ -22,6 +22,10 @@ namespace Serein.Candle.Domain.Interfaces
         Task<Product?> GetProductByIdAsync(int productId);
         Task<Voucher?> GetVoucherByCodeAsync(string code);
 
+        Task<Order?> GetOrderByIdAsync(int orderId);
+
+        Task<bool> IsStatusIdValidAsync(int statusId);
+
         Task<bool> SaveChangesAsync();
     }
 }
