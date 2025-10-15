@@ -129,9 +129,9 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
 
-// Ghi đè Key bằng Biến Môi trường mới
 if (jwtSettings != null)
 {
+    // Phải có dòng này để ghi đè giá trị từ biến môi trường
     jwtSettings.Key = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
 }
 
