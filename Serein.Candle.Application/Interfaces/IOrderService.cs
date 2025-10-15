@@ -15,7 +15,9 @@ namespace Serein.Candle.Application.Interfaces
         // Lấy chi tiết Order
         Task<OrderDetailDto?> GetOrderDetailsAsync(int orderId, int userId);
 
-        // Tạo đơn hàng mới
+        // Tạo đơn hàng mới       
         Task<(bool Success, string Message, string OrderCode)> CreateOrderAsync(int userId, OrderCreationDto dto);
+
+        Task<(bool Success, string Message)> UpdateOrderStatusAsync(int orderId,  UpdateOrderStatusDto dto);
     }
 }
