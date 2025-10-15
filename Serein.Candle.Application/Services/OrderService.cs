@@ -166,5 +166,46 @@ namespace Serein.Candle.Application.Services
 
             return (false, "Lỗi hệ thống khi lưu đơn hàng.", string.Empty);
         }
+
+        public async Task<(bool Success, string Message)> UpdateOrderStatusAsync(int orderId, UpdateOrderStatusDto dto)
+        {
+            // I. Kiểm tra tính hợp lệ của dữ liệu
+
+            // 1. Kiểm tra Order có tồn tại không
+            var order = await _orderRepository.GetOrderByIdAsync(orderId);
+            if (order == null)
+            {
+                return (false, "Mã đơn hàng không tồn tại.");
+            }
+
+            // 2. Kiểm tra StatusId mới có hợp lệ không
+            if (!await _orderRepository.IsStatusIdValidAsync(dto.StatusId)) // <-- DÙNG HÀM KIỂM TRA ID
+            {
+                return (false, $"Status ID {dto.StatusId} không hợp lệ. Vui lòng kiểm tra bảng OrderStatus.");
+            }
+
+            // 3. Kiểm tra logic chuyển trạng thái (Cancelled = 5)
+            var currentStatusId = order.StatusId;
+            var newStatusId = dto.StatusId;
+
+            if (currentStatusId == 5 && newStatusId != 5) // Không thể chuyển trạng thái khỏi 'Cancelled'
+            {
+                return (false, "Không thể thay đổi trạng thái của đơn hàng đã hủy.");
+            }
+
+            // II. Cập nhật và lưu
+
+            // 4. Cập nhật Order Entity
+            order.StatusId = newStatusId; // Gán ID trực tiếp
+            order.UpdatedAt = DateTime.UtcNow;
+
+            // 5. Lưu thay đổi
+            if (await _orderRepository.SaveChangesAsync())
+            {
+                return (true, $"Cập nhật trạng thái đơn hàng (ID {orderId}) thành công.");
+            }
+
+            return (false, "Lỗi hệ thống khi lưu thay đổi.");
+        }
     }
 }
