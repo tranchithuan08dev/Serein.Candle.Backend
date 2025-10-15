@@ -20,13 +20,24 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 // Đăng ký dịch vụ Cloudinary
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 builder.Services.AddTransient<IImageService, CloudinaryImageService>();
-
-
+// add CORS
+var _MyAllowSpecificOrigins = "MyCORS";
 // Chỉ giữ lại dòng đăng ký DbContext đúng này
 builder.Services.AddDbContext<Serein.Candle.Infrastructure.Persistence.Models.CandleShopDbContext>(options =>
     options.UseSqlServer(connectionString,
     sqlServerOptions => sqlServerOptions.MigrationsAssembly("Serein.Candle.Infrastructure")));
-
+// Cấu hình CORS <--- BƯỚC 2
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: _MyAllowSpecificOrigins,
+        builder =>
+        {
+            builder.WithOrigins("http://localhost:8080")
+                   .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                   .AllowAnyHeader()
+                   .AllowCredentials();
+        });
+});
 
 // Đăng ký các Repository
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -39,7 +50,8 @@ builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 builder.Services.AddScoped<ICartItemRepository, CartItemRepository>();
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
-
+builder.Services.AddScoped<IProductReviewRepository, ProductReviewRepository>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 // Đăng ký AutoMapper
 builder.Services.AddAutoMapper(typeof(GeneralMappingProfile));
 
@@ -51,6 +63,8 @@ builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
 builder.Services.AddScoped<IVoucherService, VoucherService>();
 builder.Services.AddScoped<IRoleTypeRepository, RoleTypeRepository>();
 builder.Services.AddScoped<IRoleTypeService, RoleTypeService>();
+builder.Services.AddScoped<IProductReviewService, ProductReviewService>();
+
 
 // Đăng ký Generic Services và Controllers 
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
@@ -64,7 +78,7 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICartService, CartService>();
-
+builder.Services.AddScoped<IOrderService, OrderService>();
 // Đăng ký dịch vụ email
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
 builder.Services.AddTransient<Serein.Candle.Application.Interfaces.IEmailService, Serein.Candle.Infrastructure.Services.EmailService>();
@@ -111,6 +125,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors(_MyAllowSpecificOrigins);
 app.UseAuthentication();
 app.UseAuthorization();
 
