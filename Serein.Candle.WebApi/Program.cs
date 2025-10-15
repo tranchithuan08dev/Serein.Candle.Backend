@@ -14,28 +14,71 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Đăng ký DbContext với chuỗi kết nối từ appsettings.json
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-// Đăng ký dịch vụ Cloudinary
-builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
-builder.Services.AddTransient<IImageService, CloudinaryImageService>();
-// add CORS
-var _MyAllowSpecificOrigins = "MyCORS";
-// Chỉ giữ lại dòng đăng ký DbContext đúng này
+// =======================================================
+// THAY ĐỔI 1: Đọc Chuỗi Kết nối Azure SQL từ Biến Môi trường mới
+// =======================================================
+// Đọc biến môi trường mới: AZURE_DB_CONNECTION_STRING
+var dbConnectionString = Environment.GetEnvironmentVariable("AZURE_DB_CONNECTION_STRING");
+
+if (string.IsNullOrEmpty(dbConnectionString))
+{
+    // Nếu biến môi trường bị thiếu, ứng dụng nên báo lỗi
+    throw new InvalidOperationException("Chuỗi kết nối DB (AZURE_DB_CONNECTION_STRING) bị thiếu trên môi trường triển khai.");
+}
+
 builder.Services.AddDbContext<Serein.Candle.Infrastructure.Persistence.Models.CandleShopDbContext>(options =>
-    options.UseSqlServer(connectionString,
+    options.UseSqlServer(dbConnectionString,
     sqlServerOptions => sqlServerOptions.MigrationsAssembly("Serein.Candle.Infrastructure")));
-// Cấu hình CORS <--- BƯỚC 2
+
+// =======================================================
+// THAY ĐỔI 2: Cấu hình CloudinarySettings
+// =======================================================
+builder.Services.Configure<CloudinarySettings>(options =>
+{
+    // Đọc các giá trị không nhạy cảm từ appsettings.json
+    builder.Configuration.GetSection("CloudinarySettings").Bind(options);
+
+    // Đọc các giá trị nhạy cảm từ Biến Môi trường mới
+    options.ApiKey = Environment.GetEnvironmentVariable("CLOUDINARY_API_KEY");
+    options.ApiSecret = Environment.GetEnvironmentVariable("CLOUDINARY_API_SECRET");
+
+    if (string.IsNullOrEmpty(options.ApiKey) || string.IsNullOrEmpty(options.ApiSecret))
+    {
+        throw new InvalidOperationException("Cấu hình Cloudinary (API Key/Secret) bị thiếu trên môi trường triển khai.");
+    }
+});
+builder.Services.AddTransient<IImageService, CloudinaryImageService>();
+
+// =======================================================
+// THAY ĐỔI 3: Cấu hình SmtpSettings
+// =======================================================
+builder.Services.Configure<SmtpSettings>(options =>
+{
+    // Đọc các giá trị không nhạy cảm từ appsettings.json
+    builder.Configuration.GetSection("SmtpSettings").Bind(options);
+
+    // Đọc mật khẩu nhạy cảm từ Biến Môi trường mới
+    options.Password = Environment.GetEnvironmentVariable("SMTP_PASSWORD");
+
+    if (string.IsNullOrEmpty(options.Password))
+    {
+        throw new InvalidOperationException("Mật khẩu SMTP (SMTP_PASSWORD) bị thiếu trên môi trường triển khai.");
+    }
+});
+builder.Services.AddTransient<Serein.Candle.Application.Interfaces.IEmailService, Serein.Candle.Infrastructure.Services.EmailService>();
+
+
+// Cấu hình CORS
+var _MyAllowSpecificOrigins = "MyCORS";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: _MyAllowSpecificOrigins,
-        builder =>
+        policy =>
         {
-            builder.WithOrigins("http://localhost:8080")
-                   .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                   .AllowAnyHeader()
-                   .AllowCredentials();
+            policy.WithOrigins("http://localhost:8080")
+                    .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                    .AllowAnyHeader()
+                    .AllowCredentials();
         });
 });
 
@@ -52,6 +95,7 @@ builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 builder.Services.AddScoped<IProductReviewRepository, ProductReviewRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+
 // Đăng ký AutoMapper
 builder.Services.AddAutoMapper(typeof(GeneralMappingProfile));
 
@@ -65,13 +109,11 @@ builder.Services.AddScoped<IRoleTypeRepository, RoleTypeRepository>();
 builder.Services.AddScoped<IRoleTypeService, RoleTypeService>();
 builder.Services.AddScoped<IProductReviewService, ProductReviewService>();
 
-
 // Đăng ký Generic Services và Controllers 
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped(typeof(IGenericService<,>), typeof(GenericService<,>));
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IWishlistService, WishlistService>();
-
 
 // Đăng ký dịch vụ bộ nhớ đệm
 builder.Services.AddMemoryCache();
@@ -79,12 +121,26 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
-// Đăng ký dịch vụ email
-builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
-builder.Services.AddTransient<Serein.Candle.Application.Interfaces.IEmailService, Serein.Candle.Infrastructure.Services.EmailService>();
 
+
+// =======================================================
+// THAY ĐỔI 4: Cấu hình JWT Settings
+// =======================================================
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
+
+// Ghi đè Key bằng Biến Môi trường mới
+if (jwtSettings != null)
+{
+    jwtSettings.Key = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
+}
+
+// Thêm kiểm tra Null cho Key trước khi sử dụng
+if (jwtSettings == null || string.IsNullOrEmpty(jwtSettings.Key) || jwtSettings.Key.Length < 32)
+{
+    throw new InvalidOperationException("Khóa bí mật JWT (JWT_SECRET_KEY) bị thiếu hoặc quá ngắn trên môi trường triển khai.");
+}
+
 builder.Services.AddSingleton(jwtSettings);
 
 var key = Encoding.ASCII.GetBytes(jwtSettings.Key);
@@ -110,6 +166,7 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
 });
+
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
