@@ -93,7 +93,7 @@ namespace Serein.Candle.Application.Services
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes),
+                Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes > 0 ? _jwtSettings.DurationInMinutes : 60),
                 Issuer = _jwtSettings.Issuer,        
                 Audience = _jwtSettings.Audience,
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
