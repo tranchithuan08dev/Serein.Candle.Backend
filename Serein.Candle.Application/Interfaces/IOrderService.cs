@@ -8,10 +8,12 @@ using System.Threading.Tasks;
 namespace Serein.Candle.Application.Interfaces
 {
     public interface IOrderService
+
     {
         // Lấy danh sách Order của User
         Task<IEnumerable<OrderDetailDto>> GetUserOrdersAsync(int userId);
 
+        Task<IEnumerable<OrderAdminSummaryDto>> GetAllOrdersForAdminAsync();
         // Lấy chi tiết Order
         Task<OrderDetailDto?> GetOrderDetailsAsync(int orderId, int userId);
 

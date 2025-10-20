@@ -79,5 +79,16 @@ namespace Serein.Candle.Infrastructure.Persistence.Repositories
             return await _context.OrderStatuses.AnyAsync(s => s.StatusId == statusId);
         }
 
+        public async Task<IEnumerable<Order>> GetAllOrdersAsync()
+        {
+            return await _context.Orders
+                                 .Include(o => o.Status)
+                                 .Include(o => o.PaymentMethod)
+                                 .Include(o => o.OrderItems).ThenInclude(oi => oi.Product)
+                                 .Include(o => o.User)
+                                 .Include(o => o.ShippingAddress)
+                                 .OrderByDescending(o => o.CreatedAt)
+                                 .ToListAsync();
+        }
     }
 }

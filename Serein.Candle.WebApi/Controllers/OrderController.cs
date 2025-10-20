@@ -108,5 +108,18 @@ namespace Serein.Candle.WebApi.Controllers
 
             return BadRequest(new { Message = result.Message });
         }
+        [HttpGet("admin")]
+        [ProducesResponseType(typeof(IEnumerable<OrderAdminSummaryDto>), 200)]
+        [ProducesResponseType(401)]
+        public async Task<IActionResult> GetAllOrdersForAdmin()
+        {
+            // Kiểm tra đăng nhập (đã được [Authorize] xử lý, nhưng vẫn kiểm tra userId phòng trường hợp cần)
+            if (GetUserId() == 0) return Unauthorized();
+
+            var orders = await _orderService.GetAllOrdersForAdminAsync();
+            return Ok(orders);
+        }
+
+
     }
 }
