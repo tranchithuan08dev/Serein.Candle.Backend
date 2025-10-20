@@ -70,6 +70,28 @@ namespace Serein.Candle.Application.Services
             return true;
         }
 
+        public async Task<UserDetailDto?> GetCurrentUserDetailsAsync(int userId)
+        {
+            var user = await _userRepository.GetUserWithRoleAsync(userId);
+
+            if (user == null)
+            {
+                return null;
+            }
+
+            return new UserDetailDto
+            {
+                UserId = user.UserId,
+                FullName = user.FullName,
+                Email = user.Email,
+                Phone = user.Phone,
+                CreatedAt = user.CreatedAt,
+              
+                RoleName = user.Role?.RoleName ?? "Không xác định"
+            };
+        
+        }
+
         public async Task<LoginResponseDto?> LoginAsync(LoginDto loginDto)
         {
             var user = await _userRepository.GetUserByEmailWithRoleAsync(loginDto.Email);

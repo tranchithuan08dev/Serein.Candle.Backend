@@ -33,6 +33,13 @@ namespace Serein.Candle.Infrastructure.Persistence.Repositories
             return await _context.Users.AsNoTracking().Include(u => u.Role).SingleOrDefaultAsync(u => u.Email == email);
         }
 
+        public async Task<User?> GetUserWithRoleAsync(int userId)
+        {
+            return await _context.Users
+                             .Include(u => u.Role) 
+                             .FirstOrDefaultAsync(u => u.UserId == userId);
+        }
+
         public async Task<bool> IsUserExistsAsync(string email, string phone)
         {
             return await _context.Users.AsNoTracking().AnyAsync(u => u.Email == email || u.Phone == phone);
