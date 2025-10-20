@@ -24,20 +24,39 @@ namespace Serein.Candle.Application.Services
 
         public async Task<IEnumerable<OrderDetailDto>> GetUserOrdersAsync(int userId)
         {
+            // Repository đã tải tất cả dữ liệu cần thiết (Eager Loading)
             var orders = await _orderRepository.GetOrdersByUserIdAsync(userId);
 
-            // Ánh xạ thủ công hoặc dùng AutoMapper (cần setup profile)
-            return orders.Select(o => new OrderDetailDto
+            // Ánh xạ đầy đủ tất cả các trường
+            return orders.Select(order => new OrderDetailDto
             {
-                OrderId = o.OrderId,
-                OrderCode = o.OrderCode,
-                StatusName = o.Status.StatusName,
-                TotalAmount = o.TotalAmount,
-                CreatedAt = o.CreatedAt
-                // Các trường khác có thể được lấy qua một hàm riêng nếu cần
+                OrderId = order.OrderId,
+                OrderCode = order.OrderCode,
+                StatusName = order.Status.StatusName,
+                PaymentMethodName = order.PaymentMethod.MethodName, // Lấy từ Navigation Property
+
+                TotalAmount = order.TotalAmount,
+                DiscountAmount = order.DiscountAmount,
+                ShippingFee = order.ShippingFee,
+                CreatedAt = order.CreatedAt,
+
+                // Thông tin địa chỉ nhận hàng
+                RecipientFullName = order.ShippingAddress.FullName, // Lấy từ Navigation Property
+                RecipientPhone = order.ShippingAddress.Phone,       // Lấy từ Navigation Property
+                                                                    // Gộp AddressLine, Ward, District, City
+                RecipientAddress = $"{order.ShippingAddress.AddressLine}, {order.ShippingAddress.Ward}, {order.ShippingAddress.District}, {order.ShippingAddress.City}",
+
+                // Chi tiết sản phẩm (Ánh xạ các OrderItem)
+                Items = order.OrderItems.Select(oi => new OrderItemDetailDto
+                {
+                    ProductId = oi.ProductId,
+                    ProductName = oi.Product.Name, // Lấy từ Navigation Property
+                    Quantity = oi.Quantity,
+                    UnitPrice = oi.UnitPrice,
+                    TotalPrice = oi.TotalPrice ?? 0m
+                }).ToList()
             }).ToList();
         }
-
         public async Task<OrderDetailDto?> GetOrderDetailsAsync(int orderId, int userId)
         {
             var order = await _orderRepository.GetOrderDetailsByIdAsync(orderId);
@@ -206,6 +225,41 @@ namespace Serein.Candle.Application.Services
             }
 
             return (false, "Lỗi hệ thống khi lưu thay đổi.");
+        }
+
+        public async Task<IEnumerable<OrderAdminSummaryDto>> GetAllOrdersForAdminAsync()
+        {
+            var orders = await _orderRepository.GetAllOrdersAsync();
+
+            return orders.Select(order => new OrderAdminSummaryDto
+            {
+                OrderId = order.OrderId,
+                OrderCode = order.OrderCode,
+                StatusName = order.Status.StatusName,
+                PaymentMethodName = order.PaymentMethod.MethodName,
+
+                TotalAmount = order.TotalAmount,
+                DiscountAmount = order.DiscountAmount,
+                ShippingFee = order.ShippingFee,
+                CreatedAt = order.CreatedAt,
+                UserId = order.UserId,
+                // Kiểm tra null cho trường hợp Guest Order (UserId = null)
+                CustomerFullName = order.User?.FullName ?? (order.ShippingAddress.FullName ?? "Khách vãng lai"),
+                CustomerEmail = order.User?.Email ?? (order.ShippingAddress.Phone ?? string.Empty),
+                RecipientAddress = order.ShippingAddress != null
+                ? $"{order.ShippingAddress.AddressLine}, {order.ShippingAddress.Ward}, {order.ShippingAddress.District}, {order.ShippingAddress.City}"
+                : "Không có địa chỉ vận chuyển", // Xử lý trường hợp ShippingAddress null
+
+                Items = order.OrderItems.Select(oi => new OrderItemDetailDto
+                {
+                    ProductId = oi.ProductId,
+                    ProductName = oi.Product.Name, 
+                    Quantity = oi.Quantity,
+                    UnitPrice = oi.UnitPrice,
+                    TotalPrice = oi.TotalPrice ?? 0m
+                }).ToList()
+             
+            }).ToList();
         }
     }
 }

@@ -14,6 +14,7 @@ namespace Serein.Candle.Domain.Interfaces
         // Lấy chi tiết đơn hàng, bao gồm OrderItems, Status, PaymentMethod, Address
         Task<Order?> GetOrderDetailsByIdAsync(int orderId);
 
+        Task<IEnumerable<Order>> GetAllOrdersAsync();
         // Thêm Address và Order
         Task AddAddressAsync(CustomerAddress address);
         Task AddOrderAsync(Order order);

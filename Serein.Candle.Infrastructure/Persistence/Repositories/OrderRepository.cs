@@ -22,10 +22,13 @@ namespace Serein.Candle.Infrastructure.Persistence.Repositories
         public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(int userId)
         {
             return await _context.Orders
-                                 .Where(o => o.UserId == userId)
-                                 .Include(o => o.Status)
-                                 .OrderByDescending(o => o.CreatedAt)
-                                 .ToListAsync();
+                               .Where(o => o.UserId == userId)
+                               .Include(o => o.Status)
+                               .Include(o => o.PaymentMethod) // Cần cho PaymentMethodName
+                               .Include(o => o.ShippingAddress) // Cần cho Recipient Info
+                               .Include(o => o.OrderItems).ThenInclude(oi => oi.Product) // Cần cho Items và ProductName
+                               .OrderByDescending(o => o.CreatedAt)
+                               .ToListAsync();
         }
 
         public async Task<Order?> GetOrderDetailsByIdAsync(int orderId)
@@ -76,5 +79,16 @@ namespace Serein.Candle.Infrastructure.Persistence.Repositories
             return await _context.OrderStatuses.AnyAsync(s => s.StatusId == statusId);
         }
 
+        public async Task<IEnumerable<Order>> GetAllOrdersAsync()
+        {
+            return await _context.Orders
+                                 .Include(o => o.Status)
+                                 .Include(o => o.PaymentMethod)
+                                 .Include(o => o.OrderItems).ThenInclude(oi => oi.Product)
+                                 .Include(o => o.User)
+                                 .Include(o => o.ShippingAddress)
+                                 .OrderByDescending(o => o.CreatedAt)
+                                 .ToListAsync();
+        }
     }
 }

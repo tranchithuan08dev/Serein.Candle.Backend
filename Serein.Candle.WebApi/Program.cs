@@ -14,71 +14,23 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// =======================================================
-// THAY ĐỔI 1: Đọc Chuỗi Kết nối Azure SQL từ Biến Môi trường mới
-// =======================================================
-// Đọc biến môi trường mới: AZURE_DB_CONNECTION_STRING
-var dbConnectionString = Environment.GetEnvironmentVariable("AZURE_DB_CONNECTION_STRING");
-
-if (string.IsNullOrEmpty(dbConnectionString))
-{
-    // Nếu biến môi trường bị thiếu, ứng dụng nên báo lỗi
-    throw new InvalidOperationException("Chuỗi kết nối DB (AZURE_DB_CONNECTION_STRING) bị thiếu trên môi trường triển khai.");
-}
-
-builder.Services.AddDbContext<Serein.Candle.Infrastructure.Persistence.Models.CandleShopDbContext>(options =>
-    options.UseSqlServer(dbConnectionString,
-    sqlServerOptions => sqlServerOptions.MigrationsAssembly("Serein.Candle.Infrastructure")));
-
-// =======================================================
-// THAY ĐỔI 2: Cấu hình CloudinarySettings
-// =======================================================
-builder.Services.Configure<CloudinarySettings>(options =>
-{
-    // Đọc các giá trị không nhạy cảm từ appsettings.json
-    builder.Configuration.GetSection("CloudinarySettings").Bind(options);
-
-    // Đọc các giá trị nhạy cảm từ Biến Môi trường mới
-    options.ApiKey = Environment.GetEnvironmentVariable("CLOUDINARY_API_KEY");
-    options.ApiSecret = Environment.GetEnvironmentVariable("CLOUDINARY_API_SECRET");
-
-    if (string.IsNullOrEmpty(options.ApiKey) || string.IsNullOrEmpty(options.ApiSecret))
-    {
-        throw new InvalidOperationException("Cấu hình Cloudinary (API Key/Secret) bị thiếu trên môi trường triển khai.");
-    }
-});
+// Add services to the container.
+// Đăng ký DbContext với chuỗi kết nối từ appsettings.json
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// Đăng ký dịch vụ Cloudinary
+builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 builder.Services.AddTransient<IImageService, CloudinaryImageService>();
-
-// =======================================================
-// THAY ĐỔI 3: Cấu hình SmtpSettings
-// =======================================================
-builder.Services.Configure<SmtpSettings>(options =>
-{
-    // Đọc các giá trị không nhạy cảm từ appsettings.json
-    builder.Configuration.GetSection("SmtpSettings").Bind(options);
-
-    // Đọc mật khẩu nhạy cảm từ Biến Môi trường mới
-    options.Password = Environment.GetEnvironmentVariable("SMTP_PASSWORD");
-
-    if (string.IsNullOrEmpty(options.Password))
-    {
-        throw new InvalidOperationException("Mật khẩu SMTP (SMTP_PASSWORD) bị thiếu trên môi trường triển khai.");
-    }
-});
-builder.Services.AddTransient<Serein.Candle.Application.Interfaces.IEmailService, Serein.Candle.Infrastructure.Services.EmailService>();
-
-
-// Cấu hình CORS
+// add CORS
 var _MyAllowSpecificOrigins = "MyCORS";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: _MyAllowSpecificOrigins,
         policy =>
         {
-            policy.WithOrigins("http://localhost:8080")
-                    .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                    .AllowAnyHeader()
-                    .AllowCredentials();
+            builder.WithOrigins("http://localhost:5173")
+                   .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                   .AllowAnyHeader()
+                   .AllowCredentials();
         });
 });
 
