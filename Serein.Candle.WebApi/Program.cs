@@ -22,10 +22,15 @@ builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection(
 builder.Services.AddTransient<IImageService, CloudinaryImageService>();
 // add CORS
 var _MyAllowSpecificOrigins = "MyCORS";
+// Chỉ giữ lại dòng đăng ký DbContext đúng này
+builder.Services.AddDbContext<Serein.Candle.Infrastructure.Persistence.Models.CandleShopDbContext>(options =>
+    options.UseSqlServer(connectionString,
+    sqlServerOptions => sqlServerOptions.MigrationsAssembly("Serein.Candle.Infrastructure")));
+// Cấu hình CORS <--- BƯỚC 2
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: _MyAllowSpecificOrigins,
-        policy =>
+        builder =>
         {
             builder.WithOrigins("http://localhost:5173")
                    .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
@@ -47,7 +52,6 @@ builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 builder.Services.AddScoped<IProductReviewRepository, ProductReviewRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-
 // Đăng ký AutoMapper
 builder.Services.AddAutoMapper(typeof(GeneralMappingProfile));
 
@@ -61,11 +65,13 @@ builder.Services.AddScoped<IRoleTypeRepository, RoleTypeRepository>();
 builder.Services.AddScoped<IRoleTypeService, RoleTypeService>();
 builder.Services.AddScoped<IProductReviewService, ProductReviewService>();
 
+
 // Đăng ký Generic Services và Controllers 
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped(typeof(IGenericService<,>), typeof(GenericService<,>));
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IWishlistService, WishlistService>();
+
 
 // Đăng ký dịch vụ bộ nhớ đệm
 builder.Services.AddMemoryCache();
@@ -73,21 +79,13 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+// Đăng ký dịch vụ email
+builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
+builder.Services.AddTransient<Serein.Candle.Application.Interfaces.IEmailService, Serein.Candle.Infrastructure.Services.EmailService>();
 
-
-// =======================================================
-// THAY ĐỔI 4: Cấu hình JWT Settings
-// =======================================================
-var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>() ?? new JwtSettings();
-jwtSettings.Key = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? jwtSettings.Key;
-
-if (string.IsNullOrEmpty(jwtSettings.Key))
-{
-    throw new InvalidOperationException("JWT_SECRET_KEY bị thiếu.");
-}
-
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
 builder.Services.AddSingleton(jwtSettings);
-
 
 var key = Encoding.ASCII.GetBytes(jwtSettings.Key);
 
@@ -112,7 +110,6 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
 });
-
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -121,8 +118,11 @@ builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-app.UseSwagger();
-app.UseSwaggerUI();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseHttpsRedirection();
 app.UseCors(_MyAllowSpecificOrigins);
