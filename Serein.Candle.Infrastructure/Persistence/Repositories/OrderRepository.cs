@@ -22,10 +22,13 @@ namespace Serein.Candle.Infrastructure.Persistence.Repositories
         public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(int userId)
         {
             return await _context.Orders
-                                 .Where(o => o.UserId == userId)
-                                 .Include(o => o.Status)
-                                 .OrderByDescending(o => o.CreatedAt)
-                                 .ToListAsync();
+                               .Where(o => o.UserId == userId)
+                               .Include(o => o.Status)
+                               .Include(o => o.PaymentMethod) // Cần cho PaymentMethodName
+                               .Include(o => o.ShippingAddress) // Cần cho Recipient Info
+                               .Include(o => o.OrderItems).ThenInclude(oi => oi.Product) // Cần cho Items và ProductName
+                               .OrderByDescending(o => o.CreatedAt)
+                               .ToListAsync();
         }
 
         public async Task<Order?> GetOrderDetailsByIdAsync(int orderId)
