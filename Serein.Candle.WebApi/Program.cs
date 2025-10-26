@@ -30,14 +30,15 @@ builder.Services.AddDbContext<Serein.Candle.Infrastructure.Persistence.Models.Ca
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: _MyAllowSpecificOrigins,
-        builder =>
+        policyBuilder =>
         {
-            builder.WithOrigins("http://localhost:5173")
-                   .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                   .AllowAnyHeader()
-                   .AllowCredentials();
+            policyBuilder
+                .AllowAnyOrigin()
+                .AllowAnyHeader()
+                .AllowAnyMethod();
         });
 });
+
 
 // Đăng ký các Repository
 builder.Services.AddScoped<IUserRepository, UserRepository>();
