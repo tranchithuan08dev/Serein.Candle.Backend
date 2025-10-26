@@ -2,6 +2,7 @@
 using Serein.Candle.Application.Interfaces;
 using Serein.Candle.Domain.DTOs;
 using Serein.Candle.WebApi.Responses;
+using System.Security.Claims;
 
 namespace Serein.Candle.WebApi.Controllers
 {
@@ -14,6 +15,16 @@ namespace Serein.Candle.WebApi.Controllers
         public AuthController(IAuthService authService)
         {
             _authService = authService;
+        }
+
+        private int GetUserId()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (int.TryParse(userIdClaim, out int userId))
+            {
+                return userId;
+            }
+            return 0;
         }
 
         [HttpPost("login")]
@@ -143,6 +154,35 @@ namespace Serein.Candle.WebApi.Controllers
                 return BadRequest(new { message = "Mã OTP không hợp lệ hoặc đã hết hạn." });
             }
             return Ok(new { message = "Mật khẩu đã được đặt lại thành công." });
+        }
+
+
+        [HttpGet("me")]
+        [ProducesResponseType(typeof(UserDetailDto), 200)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(404)]
+        public async Task<IActionResult> GetCurrentUserProfile()
+        {
+            // 1. Trích xuất User ID từ Token (Claims)
+            var userId = GetUserId();
+
+            // 2. Kiểm tra ID
+            if (userId == 0)
+            {
+                // Lỗi này hiếm khi xảy ra nếu [Authorize] đã thành công
+                return Unauthorized(new { Message = "Không tìm thấy thông tin người dùng trong token." });
+            }
+
+            // 3. Gọi Service
+            var userDetails = await _authService.GetCurrentUserDetailsAsync(userId);
+
+            if (userDetails == null)
+            {
+                return NotFound(new { Message = "Hồ sơ người dùng không tồn tại." });
+            }
+
+            // 4. Trả về DTO
+            return Ok(userDetails);
         }
 
     }

@@ -14,6 +14,7 @@ namespace Serein.Candle.Domain.Interfaces
         Task<bool> IsUserExistsAsync(string email, string phone);
         Task AddUserAsync(User user);
         void UpdateUser(User user);
+        Task<User?> GetUserWithRoleAsync(int userId);
         Task<int> SaveChangesAsync();
 
     }
